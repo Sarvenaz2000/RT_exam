@@ -24,96 +24,56 @@ int main(int argc, char **argv)
 
     if (spawn_client.call(spawn_srv))
     {
-        ROS_INFO("Successfully spawned turtle2 at position (5.0, 2.0)");
+        ROS_INFO("Successfully spawned turtle2 at position ('%f', '%f')", spawn_srv.request.x, spawn_srv.request.y);
     }
     else
     {
-        ROS_ERROR("Failed to spawn turtle2");
+        ROS_ERROR("Failed to spawn turtle2.");
         return 1;
     }
 
-    // Publishers for controlling turtle1 and turtle2
-    ros::Publisher pub1 = nh.advertise<geometry_msgs::Twist>("turtle1/cmd_vel", 10);
-    ros::Publisher pub2 = nh.advertise<geometry_msgs::Twist>("turtle2/cmd_vel", 10);
+    // Print instructions for user input
+    std::cout << "Control turtle2 using keyboard commands." << std::endl;
+    std::cout << "Enter 'w', 'a', 's', 'd' to move the turtle, or 'q' to quit." << std::endl;
 
-    // Create a Twist message
-    geometry_msgs::Twist cmd_msg;
-    std::string selected_turtle;
-    double linear_velocity, angular_velocity;
+    // Publisher to control turtle2's velocity
+    ros::Publisher pub_turtle2 = nh.advertise<geometry_msgs::Twist>"/turtle2/cmd_vel", 10);
 
-    ros::Rate loop_rate(1); // 1 Hz
-
+    // User input loop
+    char input;
+    geometry_msgs::Twist cmd;
     while (ros::ok())
     {
-        // Display menu and get input from the user
-        std::cout << "Select the turtle to control (turtle1 or turtle2): ";
-        std::cin >> selected_turtle;
+        std::cin >> input;
 
-        if (selected_turtle == "turtle1" || selected_turtle == "turtle2")
+        // Stop the turtle by default
+        cmd.linear.x = 0.0;
+        cmd.angular.z = 0.0;
+
+        switch (input)
         {
-            // Get linear velocity from user
-            std::cout << "Enter the linear velocity (between 0 and 2): ";
-            std::cin >> linear_velocity;
-
-            // Validate the linear velocity input
-            if (linear_velocity < 0 || linear_velocity > 2)
-            {
-                std::cout << "Invalid velocity, please enter a value between 0 and 2." << std::endl;
-                continue;
-            }
-
-            // Get angular velocity from user
-            std::cout << "Enter the angular velocity (between -2 and 2): ";
-            std::cin >> angular_velocity;
-
-            // Validate the angular velocity input
-            if (angular_velocity < -2 || angular_velocity > 2)
-            {
-                std::cout << "Invalid angular velocity, please enter a value between -2 and 2." << std::endl;
-                continue;
-            }
-
-            // Set linear and angular velocities based on user input
-            cmd_msg.linear.x = linear_velocity;  // Set linear velocity
-            cmd_msg.angular.z = angular_velocity; // Set angular velocity
-
-            // Publish the command for 1 second
-            if (selected_turtle == "turtle1")
-            {
-                pub1.publish(cmd_msg);
-            }
-            else if (selected_turtle == "turtle2")
-            {
-                pub2.publish(cmd_msg);
-            }
-
-            // Wait for 1 second
-            ros::Duration(1.0).sleep();
-
-            // Stop the turtle after 1 second
-            cmd_msg.linear.x = 0;
-            cmd_msg.angular.z = 0;
-            if (selected_turtle == "turtle1")
-            {
-                pub1.publish(cmd_msg);
-            }
-            else if (selected_turtle == "turtle2")
-            {
-                pub2.publish(cmd_msg);
-            }
-
-            // Prompt the user for the next command
-            std::cout << "Turtle " << selected_turtle << " has stopped." << std::endl;
-        }
-        else
-        {
-            std::cout << "Invalid turtle selection. Please choose turtle1 or turtle2." << std::endl;
+        case 'w':
+            cmd.linear.x = 1.0;
+            break;
+        case 's':
+            cmd.linear.x = -1.0;
+            break;
+        case 'a':
+            cmd.angular.z = 1.0;
+            break;
+        case 'd':
+            cmd.angular.z = -1.0;
+            break;
+        case 'q':
+            ROS_INFO("Exiting UI node.");
+            return 0;
+        default:
+            ROS_WARN("Invalid input. Use 'w', 'a', 's', 'd' to move or 'q' to quit.");
+            break;
         }
 
-        ros::spinOnce();
-        loop_rate.sleep();
+        pub_turtle2.publish(cmd);
     }
 
     return 0;
 }
-
